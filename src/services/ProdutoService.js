@@ -25,37 +25,37 @@ function validar({ nome, preco, estoque }, { parcial = false } = {}) {
 const ProdutoService = {
   ValidationError,
 
-  criar(dados) {
+  criar(dados, donoId) {
     validar(dados);
-    return ProdutoModel.create(dados);
+    return ProdutoModel.create(dados, donoId);
   },
 
-  listarTodos() {
-    return ProdutoModel.findAll();
+  listarTodos(donoId) {
+    return ProdutoModel.findAll(donoId);
   },
 
-  buscarPorId(id) {
-    return ProdutoModel.findById(id);
+  buscarPorId(id, donoId) {
+    return ProdutoModel.findById(id, donoId);
   },
 
-  buscarPorNome(nome) {
+  buscarPorNome(nome, donoId) {
     if (!nome || nome.trim().length === 0) {
       throw new ValidationError('Informe o parametro "nome" para a busca.');
     }
-    return ProdutoModel.findByName(nome);
+    return ProdutoModel.findByName(nome, donoId);
   },
 
-  contar() {
-    return ProdutoModel.count();
+  contar(donoId) {
+    return ProdutoModel.count(donoId);
   },
 
-  atualizar(id, dados) {
+  atualizar(id, dados, donoId) {
     validar(dados, { parcial: true });
-    return ProdutoModel.update(id, dados);
+    return ProdutoModel.update(id, dados, donoId);
   },
 
-  remover(id) {
-    return ProdutoModel.delete(id);
+  remover(id, donoId) {
+    return ProdutoModel.delete(id, donoId);
   },
 };
 

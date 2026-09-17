@@ -39,6 +39,18 @@ const options = {
             senha: { type: 'string', format: 'password' },
           },
         },
+        LogAuditoria: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            usuario_nome: { type: 'string', example: 'Maria Silva' },
+            acao: { type: 'string', example: 'CRIOU' },
+            entidade: { type: 'string', example: 'PRODUTO' },
+            entidade_id: { type: 'integer', example: 1 },
+            detalhes: { type: 'string', example: 'Teclado Mecanico' },
+            criado_em: { type: 'string', format: 'date-time' },
+          },
+        },
         Produto: {
           type: 'object',
           properties: {

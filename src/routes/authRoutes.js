@@ -39,6 +39,24 @@ router.post('/register', AuthController.register);
  *       401: { description: Credenciais incorretas }
  */
 router.post('/login', AuthController.login);
+
+/**
+ * @openapi
+ * /auth/logout:
+ *   post:
+ *     summary: Encerra a sessao e remove o cookie JWT
+ *     tags: [Autenticacao]
+ *     security: []
+ *     responses:
+ *       200: { description: Sessao encerrada }
+ * /auth/me:
+ *   get:
+ *     summary: Retorna o usuario autenticado e seu papel
+ *     tags: [Autenticacao]
+ *     responses:
+ *       200: { description: Usuario autenticado }
+ *       401: { description: Token ausente, invalido ou expirado }
+ */
 router.post('/logout', AuthController.logout);
 router.get('/me', autenticar, AuthController.me);
 

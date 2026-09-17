@@ -14,6 +14,8 @@ function assinarToken(usuario) {
     sub: String(usuario.id),
     nome: usuario.nome,
     email: usuario.email,
+    donoId: usuario.donoId ?? usuario.dono_id ?? usuario.id,
+    papel: usuario.papel ?? 'proprietario',
     iat: agora,
     exp: agora + TOKEN_TTL_SECONDS,
   }));

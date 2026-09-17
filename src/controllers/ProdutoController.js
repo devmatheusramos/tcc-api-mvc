@@ -12,7 +12,9 @@ function tratarErro(res, err) {
 const ProdutoController = {
   async create(req, res) {
     try {
-      const job = await produtoQueue.add('criar', { tipo: 'criar', dados: req.body });
+      const job = await produtoQueue.add('criar', {
+        tipo: 'criar', dados: req.body, contexto: req.usuario,
+      });
       res.status(200).json({
         jobId: job.id,
         status: 'na fila',
@@ -24,16 +26,16 @@ const ProdutoController = {
   },
 
   findAll(req, res) {
-    res.json(ProdutoService.listarTodos());
+    res.json(ProdutoService.listarTodos(req.usuario.donoId));
   },
 
   count(req, res) {
-    res.json({ total: ProdutoService.contar() });
+    res.json({ total: ProdutoService.contar(req.usuario.donoId) });
   },
 
   findByName(req, res) {
     try {
-      const produtos = ProdutoService.buscarPorNome(req.query.nome);
+      const produtos = ProdutoService.buscarPorNome(req.query.nome, req.usuario.donoId);
       res.json(produtos);
     } catch (err) {
       tratarErro(res, err);
@@ -41,7 +43,7 @@ const ProdutoController = {
   },
 
   findById(req, res) {
-    const produto = ProdutoService.buscarPorId(req.params.id);
+    const produto = ProdutoService.buscarPorId(req.params.id, req.usuario.donoId);
     if (!produto) {
       return res.status(404).json({ error: 'Produto nao encontrado.' });
     }
@@ -54,6 +56,7 @@ const ProdutoController = {
         tipo: 'atualizar',
         id: req.params.id,
         dados: req.body,
+        contexto: req.usuario,
       });
       res.status(200).json({
         jobId: job.id,
@@ -67,7 +70,9 @@ const ProdutoController = {
 
   async delete(req, res) {
     try {
-      const job = await produtoQueue.add('remover', { tipo: 'remover', id: req.params.id });
+      const job = await produtoQueue.add('remover', {
+        tipo: 'remover', id: req.params.id, contexto: req.usuario,
+      });
       res.status(200).json({
         jobId: job.id,
         status: 'na fila',
