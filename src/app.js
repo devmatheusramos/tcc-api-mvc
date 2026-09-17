@@ -4,11 +4,16 @@ const swaggerUi = require('swagger-ui-express');
 const routes = require('./routes');
 const swaggerSpec = require('./config/swagger');
 const apiLimiter = require('./middlewares/rateLimiter');
+const { protegerPagina } = require('./middlewares/auth');
 
 const app = express();
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '..', 'public')));
+const publicDir = path.join(__dirname, '..', 'public');
+app.get('/', (req, res) => res.sendFile(path.join(publicDir, 'index.html')));
+app.get('/app', protegerPagina, (req, res) => res.sendFile(path.join(publicDir, 'app.html')));
+app.get('/app.html', protegerPagina, (req, res) => res.redirect('/app'));
+app.use(express.static(publicDir, { index: false }));
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/api', apiLimiter, routes);
 
