@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StockFlow | Produtos</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div><span class="topbar-brand">StockFlow</span><h1>Gerenciador de Produtos</h1></div>
+    <div class="user-area">
+      <span id="usuarioNome"></span><span class="badge" id="totalProdutos">0 produtos</span>
+      <button type="button" id="logoutBtn" class="logout-btn">Sair</button>
+    </div>
+  </header>
+  <main class="container">
+    <section class="card">
+      <h2 id="formTitulo">Novo produto</h2>
+      <form id="produtoForm">
+        <input type="hidden" id="produtoId" />
+        <div><label for="nome">Nome</label><input type="text" id="nome" required placeholder="Ex: Teclado Mecanico" /></div>
+        <div><label for="preco">Preco</label><input type="number" id="preco" step="0.01" min="0.01" required placeholder="0.00" /></div>
+        <div><label for="categoria">Categoria</label><input type="text" id="categoria" placeholder="Ex: Perifericos" /></div>
+        <div><label for="estoque">Estoque</label><input type="number" id="estoque" min="0" step="1" placeholder="0" /></div>
+        <div class="form-actions"><button type="submit" id="submitBtn">Adicionar</button><button type="button" id="cancelarBtn" class="secondary hidden">Cancelar</button></div>
+      </form>
+    </section>
+    <section class="card">
+      <div class="lista-header"><h2>Produtos</h2><input type="search" id="buscaInput" placeholder="Buscar por nome..." /></div>
+      <p id="mensagem" class="mensagem hidden"></p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Nome</th><th>Categoria</th><th>Preco</th><th>Estoque</th><th></th></tr></thead>
+        <tbody id="produtosTbody"></tbody>
+      </table></div>
+    </section>
+  </main>
+  <script src="js/script.js"></script>
+</body>
+</html>

@@ -13,6 +13,26 @@ const buscaInput = document.getElementById('buscaInput');
 let termoBusca = '';
 let pollingId = null;
 
+async function fetchAutenticado(url, options) {
+  const resp = await fetch(url, options);
+  if (resp.status === 401) {
+    window.location.replace('/');
+    throw new Error('Sessao expirada.');
+  }
+  return resp;
+}
+
+async function carregarUsuario() {
+  const resp = await fetchAutenticado('/api/auth/me');
+  const { usuario } = await resp.json();
+  document.getElementById('usuarioNome').textContent = usuario.nome;
+}
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  window.location.replace('/');
+});
+
 function formatarPreco(valor) {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -45,7 +65,7 @@ async function acompanharJob(jobId) {
     tentativas += 1;
 
     try {
-      const resp = await fetch(`/api/jobs/${jobId}`);
+      const resp = await fetchAutenticado(`/api/jobs/${jobId}`);
       const job = await resp.json();
 
       if (!resp.ok) {
@@ -104,7 +124,7 @@ function sairModoEdicao() {
 async function removerProduto(id) {
   if (!confirm('Remover este produto?')) return;
 
-  const resp = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+  const resp = await fetchAutenticado(`${API_BASE}/${id}`, { method: 'DELETE' });
   if (!resp.ok) {
     const erro = await resp.json();
     mostrarErro(erro.error);
@@ -139,7 +159,7 @@ function renderProdutos(produtos) {
 }
 
 async function atualizarTotal() {
-  const resp = await fetch(`${API_BASE}/count`);
+  const resp = await fetchAutenticado(`${API_BASE}/count`);
   const { total } = await resp.json();
   totalBadge.textContent = `${total} produto${total === 1 ? '' : 's'}`;
 }
@@ -149,7 +169,7 @@ async function carregarProdutos() {
     ? `${API_BASE}/search?nome=${encodeURIComponent(termoBusca)}`
     : API_BASE;
 
-  const resp = await fetch(url);
+  const resp = await fetchAutenticado(url);
   const produtos = await resp.json();
   renderProdutos(produtos);
   await atualizarTotal();
@@ -176,7 +196,7 @@ form.addEventListener('submit', async (event) => {
     estoque: Number(document.getElementById('estoque').value || 0),
   };
 
-  const resp = await fetch(id ? `${API_BASE}/${id}` : API_BASE, {
+  const resp = await fetchAutenticado(id ? `${API_BASE}/${id}` : API_BASE, {
     method: id ? 'PUT' : 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(dados),
@@ -195,4 +215,4 @@ form.addEventListener('submit', async (event) => {
 
 cancelarBtn.addEventListener('click', sairModoEdicao);
 
-carregarProdutos();
+Promise.all([carregarUsuario(), carregarProdutos()]).catch(() => {});

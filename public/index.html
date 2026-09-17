@@ -3,63 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gerenciador de Produtos</title>
+  <title>StockFlow | Gestao de produtos</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
-<body>
-  <header class="topbar">
-    <h1>Gerenciador de Produtos</h1>
-    <span class="badge" id="totalProdutos">0 produtos</span>
-  </header>
-
-  <main class="container">
-    <section class="card">
-      <h2 id="formTitulo">Novo produto</h2>
-      <form id="produtoForm">
-        <input type="hidden" id="produtoId" />
-
-        <label for="nome">Nome</label>
-        <input type="text" id="nome" required placeholder="Ex: Teclado Mecanico" />
-
-        <label for="preco">Preco</label>
-        <input type="number" id="preco" step="0.01" min="0.01" required placeholder="0.00" />
-
-        <label for="categoria">Categoria</label>
-        <input type="text" id="categoria" placeholder="Ex: Perifericos" />
-
-        <label for="estoque">Estoque</label>
-        <input type="number" id="estoque" min="0" step="1" placeholder="0" />
-
-        <div class="form-actions">
-          <button type="submit" id="submitBtn">Adicionar</button>
-          <button type="button" id="cancelarBtn" class="secondary hidden">Cancelar</button>
+<body class="auth-page">
+  <main class="auth-layout">
+    <section class="intro">
+      <span class="brand">StockFlow</span>
+      <h1>Produtos organizados. Operacoes sob controle.</h1>
+      <p>Gerencie catalogo e estoque em uma interface conectada a uma API com processamento assincrono e acompanhamento em tempo real.</p>
+      <div class="features" aria-label="Recursos do sistema">
+        <span>CRUD de produtos</span><span>Fila de processamento</span><span>API documentada</span>
+      </div>
+    </section>
+    <section class="auth-panel">
+      <div class="auth-tabs" role="tablist">
+        <button type="button" class="auth-tab active" data-mode="login">Entrar</button>
+        <button type="button" class="auth-tab" data-mode="register">Criar conta</button>
+      </div>
+      <form id="authForm">
+        <div id="nomeGroup" class="hidden">
+          <label for="authNome">Nome</label>
+          <input id="authNome" type="text" autocomplete="name" placeholder="Seu nome" />
         </div>
+        <label for="authEmail">E-mail</label>
+        <input id="authEmail" type="email" autocomplete="email" required placeholder="voce@email.com" />
+        <label for="authSenha">Senha</label>
+        <input id="authSenha" type="password" autocomplete="current-password" minlength="6" required placeholder="Minimo de 6 caracteres" />
+        <p id="authMensagem" class="mensagem erro hidden"></p>
+        <button type="submit" id="authSubmit">Entrar no sistema</button>
       </form>
     </section>
-
-    <section class="card">
-      <div class="lista-header">
-        <h2>Produtos</h2>
-        <input type="search" id="buscaInput" placeholder="Buscar por nome..." />
-      </div>
-
-      <p id="mensagem" class="mensagem hidden"></p>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Categoria</th>
-            <th>Preco</th>
-            <th>Estoque</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="produtosTbody"></tbody>
-      </table>
-    </section>
   </main>
-
-  <script src="js/script.js"></script>
+  <script src="js/auth.js"></script>
 </body>
 </html>
