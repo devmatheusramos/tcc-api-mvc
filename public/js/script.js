@@ -8,6 +8,9 @@ const formTitulo = document.getElementById('formTitulo');
 const produtoIdInput = document.getElementById('produtoId');
 const submitBtn = document.getElementById('submitBtn');
 const cancelarBtn = document.getElementById('cancelarBtn');
+const buscaInput = document.getElementById('buscaInput');
+
+let termoBusca = '';
 
 function formatarPreco(valor) {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -86,11 +89,24 @@ async function atualizarTotal() {
 }
 
 async function carregarProdutos() {
-  const resp = await fetch(API_BASE);
+  const url = termoBusca
+    ? `${API_BASE}/search?nome=${encodeURIComponent(termoBusca)}`
+    : API_BASE;
+
+  const resp = await fetch(url);
   const produtos = await resp.json();
   renderProdutos(produtos);
   await atualizarTotal();
 }
+
+let debounceId;
+buscaInput.addEventListener('input', (event) => {
+  clearTimeout(debounceId);
+  debounceId = setTimeout(() => {
+    termoBusca = event.target.value.trim();
+    carregarProdutos();
+  }, 300);
+});
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
