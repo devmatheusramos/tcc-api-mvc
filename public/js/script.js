@@ -4,6 +4,10 @@ const tbody = document.getElementById('produtosTbody');
 const form = document.getElementById('produtoForm');
 const totalBadge = document.getElementById('totalProdutos');
 const mensagemEl = document.getElementById('mensagem');
+const formTitulo = document.getElementById('formTitulo');
+const produtoIdInput = document.getElementById('produtoId');
+const submitBtn = document.getElementById('submitBtn');
+const cancelarBtn = document.getElementById('cancelarBtn');
 
 function formatarPreco(valor) {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -19,6 +23,39 @@ function limparErro() {
   mensagemEl.textContent = '';
 }
 
+function entrarModoEdicao(produto) {
+  produtoIdInput.value = produto.id;
+  document.getElementById('nome').value = produto.nome;
+  document.getElementById('preco').value = produto.preco;
+  document.getElementById('categoria').value = produto.categoria ?? '';
+  document.getElementById('estoque').value = produto.estoque;
+
+  formTitulo.textContent = `Editar produto #${produto.id}`;
+  submitBtn.textContent = 'Salvar';
+  cancelarBtn.classList.remove('hidden');
+}
+
+function sairModoEdicao() {
+  form.reset();
+  produtoIdInput.value = '';
+  formTitulo.textContent = 'Novo produto';
+  submitBtn.textContent = 'Adicionar';
+  cancelarBtn.classList.add('hidden');
+}
+
+async function removerProduto(id) {
+  if (!confirm('Remover este produto?')) return;
+
+  const resp = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+  if (!resp.ok) {
+    const erro = await resp.json();
+    mostrarErro(erro.error);
+    return;
+  }
+
+  await carregarProdutos();
+}
+
 function renderProdutos(produtos) {
   tbody.innerHTML = '';
 
@@ -29,8 +66,15 @@ function renderProdutos(produtos) {
       <td>${produto.categoria ?? '-'}</td>
       <td>${formatarPreco(produto.preco)}</td>
       <td>${produto.estoque}</td>
-      <td class="acoes"></td>
+      <td class="acoes">
+        <button type="button" class="secondary editar">Editar</button>
+        <button type="button" class="danger remover">Remover</button>
+      </td>
     `;
+
+    tr.querySelector('.editar').addEventListener('click', () => entrarModoEdicao(produto));
+    tr.querySelector('.remover').addEventListener('click', () => removerProduto(produto.id));
+
     tbody.appendChild(tr);
   });
 }
@@ -52,6 +96,7 @@ form.addEventListener('submit', async (event) => {
   event.preventDefault();
   limparErro();
 
+  const id = produtoIdInput.value;
   const dados = {
     nome: document.getElementById('nome').value.trim(),
     preco: Number(document.getElementById('preco').value),
@@ -59,8 +104,8 @@ form.addEventListener('submit', async (event) => {
     estoque: Number(document.getElementById('estoque').value || 0),
   };
 
-  const resp = await fetch(API_BASE, {
-    method: 'POST',
+  const resp = await fetch(id ? `${API_BASE}/${id}` : API_BASE, {
+    method: id ? 'PUT' : 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(dados),
   });
@@ -71,8 +116,10 @@ form.addEventListener('submit', async (event) => {
     return;
   }
 
-  form.reset();
+  sairModoEdicao();
   await carregarProdutos();
 });
+
+cancelarBtn.addEventListener('click', sairModoEdicao);
 
 carregarProdutos();
