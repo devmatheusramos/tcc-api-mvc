@@ -4,3 +4,4 @@ data/*.sqlite-shm
 data/*.sqlite-wal
 .env
 npm-debug.log*
+cookies.txt
