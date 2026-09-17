@@ -1,108 +1,156 @@
-# Arquitetura — API REST de Produtos (MVC)
+# Arquitetura - API REST de Produtos
 
-Diagramas em [Mermaid](https://mermaid.js.org/), renderizados nativamente pelo
-GitHub. Cobrem o requisito de desenho arquitetural (C4 + UML) do exercício.
+Os diagramas usam Mermaid e sao renderizados diretamente pelo GitHub. O foco
+e mostrar a solucao de forma simples: uma API MVC protegida por autenticacao e
+uma fila para processar alteracoes nos produtos.
 
-## 1. C4 — Contexto
-
-Visão de fora: quem usa o sistema e com o que ele conversa.
+## 1. C4 - Contexto
 
 ```mermaid
 C4Context
-    title Contexto - API de Produtos
+    title Contexto do StockFlow
 
-    Person(cliente, "Cliente da API", "Usa Postman/curl/navegador para consumir a API")
-    System(api, "API REST de Produtos", "Node.js + Express, empacotada em container Docker")
-    SystemDb(db, "SQLite (node:sqlite)", "Arquivo persistido em volume Docker (./data)")
+    Person(usuario, "Usuario", "Gerencia produtos pelo frontend ou consome a API")
+    System(sistema, "StockFlow", "API REST MVC e frontend de gestao de produtos")
+    System_Ext(redis, "Redis", "Mantem a fila de operacoes")
+    SystemDb(sqlite, "SQLite", "Persiste usuarios, produtos e logs")
 
-    Rel(cliente, api, "Faz requisicoes HTTP (JSON) na porta 3000")
-    Rel(api, db, "Le e escreve dados via SQL")
+    Rel(usuario, sistema, "Usa via HTTP/JSON localmente")
+    Rel(sistema, redis, "Publica e consome jobs")
+    Rel(sistema, sqlite, "Le e grava dados")
 ```
 
-## 2. C4 — Componentes (dentro da API)
-
-Visão interna: como a requisição atravessa as camadas MVC + Service.
+## 2. C4 - Containers e componentes
 
 ```mermaid
-C4Component
-    title Componentes internos - API de Produtos
+C4Container
+    title Containers principais
 
-    Container_Boundary(api, "API REST de Produtos") {
-        Component(routes, "Routes", "Express Router", "Mapeia metodo+path para o Controller")
-        Component(controller, "ProdutoController", "Controller", "Le req, chama a Service, monta a resposta HTTP")
-        Component(service, "ProdutoService", "Service", "Validacao e regras de negocio")
-        Component(model, "ProdutoModel", "Model", "Unica camada que executa SQL")
+    Person(usuario, "Usuario")
+
+    Container_Boundary(stockflow, "StockFlow") {
+        Container(frontend, "Frontend", "HTML, CSS e JavaScript", "Login, produtos e polling")
+        Container(api, "API REST", "Node.js e Express", "JWT, rotas e camadas MVC")
+        Container(worker, "Worker", "Node.js e BullMQ", "Processa escritas assincronas")
+        ContainerDb(redis, "Fila", "Redis", "Armazena jobs")
+        ContainerDb(sqlite, "Banco", "SQLite", "Usuarios, produtos e auditoria")
     }
-    SystemDb(db, "SQLite", "data/tcc.sqlite")
 
-    Rel(routes, controller, "encaminha requisicao")
-    Rel(controller, service, "chama")
-    Rel(service, model, "chama")
-    Rel(model, db, "SQL")
+    Rel(usuario, frontend, "Acessa")
+    Rel(frontend, api, "HTTP/JSON com JWT")
+    Rel(api, redis, "Enfileira create, update e delete")
+    Rel(worker, redis, "Consome jobs")
+    Rel(api, sqlite, "Le via Service e Model")
+    Rel(worker, sqlite, "Grava via Service e Model")
 ```
 
-## 3. Sequência — `POST /api/produtos`
+Dentro da API, as responsabilidades seguem o MVC com uma camada de servico:
+
+```mermaid
+flowchart LR
+    R[Routes] --> C[Controller]
+    C --> S[Service]
+    S --> M[Model]
+    M --> DB[(SQLite)]
+```
+
+- **Routes:** define os endpoints e aplica a autenticacao.
+- **Controller:** recebe a requisicao e monta a resposta HTTP.
+- **Service:** concentra validacoes e regras de negocio.
+- **Model:** executa o acesso ao SQLite.
+
+## 3. Sequencia - Login
 
 ```mermaid
 sequenceDiagram
-    actor Cliente
-    participant Routes
-    participant Controller as ProdutoController
-    participant Service as ProdutoService
-    participant Model as ProdutoModel
+    actor Usuario
+    participant API
+    participant AuthService
     participant DB as SQLite
 
-    Cliente->>Routes: POST /api/produtos (JSON)
-    Routes->>Controller: create(req, res)
-    Controller->>Service: criar(dados)
-    Service->>Service: validar(nome, preco, estoque)
-    alt dados invalidos
-        Service-->>Controller: lanca ValidationError
-        Controller-->>Cliente: 400 { error }
-    else dados validos
-        Service->>Model: create(dados)
-        Model->>DB: INSERT INTO produtos ...
-        DB-->>Model: lastInsertRowid
-        Model->>DB: SELECT * WHERE id = ...
-        DB-->>Model: produto criado
-        Model-->>Service: produto
-        Service-->>Controller: produto
-        Controller-->>Cliente: 201 produto (JSON)
-    end
+    Usuario->>API: POST /api/auth/login
+    API->>AuthService: validar credenciais
+    AuthService->>DB: buscar usuario por e-mail
+    DB-->>AuthService: usuario e hash da senha
+    AuthService-->>API: JWT valido por 15 minutos
+    API-->>Usuario: 200 + cookie HttpOnly
 ```
 
-## 4. Diagrama de classes — Model
+## 4. Sequencia - Criacao assincrona
+
+```mermaid
+sequenceDiagram
+    actor Usuario
+    participant API
+    participant Fila as BullMQ / Redis
+    participant Worker
+    participant DB as SQLite
+
+    Usuario->>API: POST /api/produtos + JWT
+    API->>Fila: adicionar job de criacao
+    API-->>Usuario: 200 + jobId
+    Worker->>Fila: consumir job
+    Worker->>DB: inserir produto via Service e Model
+    DB-->>Worker: produto criado
+    Usuario->>API: GET /api/jobs/:id
+    API-->>Usuario: status completed
+```
+
+As consultas (`find all`, `find by id`, `find by name` e `count`) sao
+sincronas. Criacao, atualizacao e exclusao sao enviadas para a fila e
+acompanhadas pelo frontend por polling. Proprietarios e colaboradores usam o
+mesmo espaco de produtos, identificado pelo proprietario. Cada alteracao gera
+um log com usuario, acao, entidade e horario.
+
+## 5. Dominio
 
 ```mermaid
 classDiagram
+    class Usuario {
+        +int id
+        +string nome
+        +string email
+        +string senha_hash
+        +int dono_id
+        +string papel
+        +bool ativo
+    }
+
     class Produto {
         +int id
         +string nome
         +float preco
         +string categoria
         +int estoque
-        +string criado_em
+        +int dono_id
     }
 
-    class ProdutoModel {
-        +create(dados) Produto
-        +findAll() Produto[]
-        +findById(id) Produto
-        +findByName(nome) Produto[]
-        +count() int
-        +update(id, dados) Produto
-        +delete(id) bool
+    class LogAuditoria {
+        +int id
+        +int dono_id
+        +int usuario_id
+        +string acao
+        +string entidade
+        +string detalhes
+        +datetime criado_em
     }
 
-    ProdutoModel --> Produto : le/escreve
+    class ProdutoService {
+        +criar(dados)
+        +listarTodos()
+        +buscarPorId(id)
+        +buscarPorNome(nome)
+        +contar()
+        +atualizar(id, dados)
+        +remover(id)
+    }
+
+    ProdutoService --> Produto : gerencia
+    Usuario "1" --> "0..*" Usuario : possui colaboradores
+    Usuario "1" --> "0..*" Produto : compartilha espaco
+    Usuario "1" --> "0..*" LogAuditoria : realiza acoes
 ```
 
-## Por que essas camadas
-
-- **Model** isola todo acesso a dados: se o banco mudar (ex.: Postgres), só o
-  Model muda.
-- **Service** concentra a regra de negócio (validação) fora do HTTP — pode ser
-  reaproveitada por outro tipo de entrada (ex.: um job, uma CLI) sem duplicar
-  código.
-- **Controller** só traduz HTTP: não tem SQL nem regra de negócio.
-- **Routes** é a única camada que conhece os paths da API.
+Em producao, HTTPS deve ser terminado por um proxy reverso ou pela plataforma
+de hospedagem. O JWT expira em 15 minutos e e enviado pelo frontend em cookie
+`HttpOnly` com `SameSite=Strict`.

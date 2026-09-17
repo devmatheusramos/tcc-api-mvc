@@ -1,0 +1,32 @@
+name: Relatar defeito
+description: Registre um comportamento incorreto ou inesperado
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: contexto
+    attributes:
+      label: Contexto
+      description: Onde e quando o problema acontece?
+    validations:
+      required: true
+  - type: textarea
+    id: reproducao
+    attributes:
+      label: Como reproduzir
+      description: Informe os passos, dados e endpoint utilizados.
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Resultado esperado
+    validations:
+      required: true
+  - type: dropdown
+    id: prioridade
+    attributes:
+      label: Prioridade
+      options: [Alta, Media, Baixa]
+    validations:
+      required: true

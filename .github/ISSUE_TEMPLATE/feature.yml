@@ -1,0 +1,31 @@
+name: Solicitar melhoria
+description: Proponha uma funcionalidade ou evolucao arquitetural
+title: "[Melhoria]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Problema ou oportunidade
+      description: Explique a necessidade antes de propor a solucao.
+    validations:
+      required: true
+  - type: textarea
+    id: aceite
+    attributes:
+      label: Criterios de aceite
+      description: Liste resultados objetivos que definem a conclusao.
+    validations:
+      required: true
+  - type: textarea
+    id: arquitetura
+    attributes:
+      label: Impacto arquitetural
+      description: Informe componentes, contratos ou documentos afetados.
+  - type: dropdown
+    id: prioridade
+    attributes:
+      label: Prioridade
+      options: [Alta, Media, Baixa]
+    validations:
+      required: true

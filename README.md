@@ -1,171 +1,211 @@
-# API REST de Produtos — MVC (TCC Arquitetura de Software)
+# StockFlow - API REST MVC de Produtos
 
-API RESTful de CRUD de Produtos, construída em Node.js + Express seguindo o
-padrão **MVC + Service**, com persistência real em **SQLite**.
+Projeto do desafio final de Arquitetura de Software. O StockFlow e uma API
+REST em Node.js e Express, organizada em MVC + Service, com frontend proprio,
+persistencia SQLite, autenticacao JWT, colaboradores, auditoria e escritas
+assincronas com BullMQ e Redis.
 
-Exercício de conclusão de curso: pós-graduação em Arquitetura de Software.
+## Funcionalidades
+
+- CRUD, contagem, busca por ID, nome e listagem de produtos;
+- cadastro e login com JWT de 15 minutos;
+- senhas protegidas com `scrypt` e salt individual;
+- contas de colaboradores vinculadas ao proprietario;
+- isolamento dos produtos e jobs por proprietario;
+- auditoria de alteracoes em produtos e colaboradores;
+- fila para criar, atualizar e remover produtos;
+- polling do status dos jobs no frontend;
+- rate limit nas rotas da API;
+- contrato OpenAPI e interface Swagger;
+- testes automatizados com o runner nativo do Node.js;
+- execucao completa com Docker Compose.
 
 ## Arquitetura
 
-Desenho completo (C4 + diagrama de sequência + diagrama de classes) em
-[`docs/architecture.md`](docs/architecture.md).
+Os diagramas C4, sequencias de login/fila e modelo de dominio estao em
+[`docs/architecture.md`](docs/architecture.md). As decisoes arquiteturais ficam
+em [`docs/adr/`](docs/adr/).
 
-## Estrutura de pastas
+Fluxo principal das camadas:
 
+```text
+Routes -> Controller -> Service -> Model -> SQLite
 ```
+
+- **Routes:** endpoints, autenticacao e autorizacao.
+- **Controller:** traduz requisicoes e respostas HTTP.
+- **Service:** validacoes e regras de negocio.
+- **Model:** acesso SQL e persistencia.
+- **Worker:** consome jobs e reutiliza Service/Model para as escritas.
+
+## Estrutura
+
+```text
 src/
-├── config/database.js       # conexão com o SQLite + criação da tabela
-├── config/swagger.js        # configuração do OpenAPI/Swagger
-├── models/ProdutoModel.js   # acesso a dados (SQL) — sem regra de negócio
-├── services/ProdutoService.js # validação e regras de negócio
-├── controllers/ProdutoController.js # camada HTTP (req/res, status codes)
-├── routes/                  # mapeamento de rotas -> controllers (com anotações OpenAPI)
-└── app.js                   # configuração do Express
-public/                      # frontend estático (HTML/CSS/JS puro) que consome a API
-server.js                    # ponto de entrada (sobe o servidor)
-data/tcc.sqlite               # arquivo do banco (gerado automaticamente)
-docs/architecture.md         # diagramas de arquitetura
-Dockerfile / docker-compose.yml # empacota a API para rodar em container
+|-- config/          # SQLite, Redis e Swagger
+|-- controllers/     # HTTP de auth, produtos, jobs, equipe e logs
+|-- middlewares/     # JWT, autorizacao e rate limit
+|-- models/          # Produtos, usuarios e auditoria
+|-- queue/           # Fila BullMQ de produtos
+|-- routes/          # Endpoints e anotacoes OpenAPI
+|-- services/        # Regras de negocio
+|-- utils/           # Assinatura e verificacao JWT
+|-- workers/         # Consumidor da fila
+|-- app.js           # Configuracao do Express
+public/              # Dashboard, area protegida e JavaScript do frontend
+test/                # Testes com SQLite temporario
+docs/                # Arquitetura, governanca e ADRs
+.github/             # Templates de tickets e pull requests
+data/.gitkeep        # Mantem a pasta; o banco e criado em execucao
+docker-compose.yml   # API, worker e Redis
+Dockerfile           # Imagem Node.js da API e do worker
+server.js            # Ponto de entrada
 ```
 
-| Camada         | Responsabilidade                                                                      |
-| -------------- | ------------------------------------------------------------------------------------- |
-| **Routes**     | Mapeia `metodo + path` para uma função do Controller.                                 |
-| **Controller** | Lê a requisição HTTP, chama a Service, devolve status code + JSON. Não sabe SQL.      |
-| **Service**    | Validação e regra de negócio (ex.: preço deve ser > 0). Não sabe o que é `req`/`res`. |
-| **Model**      | Única camada que fala com o banco (SQLite). Sem regra de negócio.                     |
+## Executar com Docker
 
-## Como rodar
-
-### Com Docker (recomendado)
+Use uma chave longa e aleatoria em `JWT_SECRET` fora do desenvolvimento. O
+Compose possui um valor local apenas para facilitar a avaliacao.
 
 ```bash
-docker compose up --build
+docker compose up --build -d
+docker compose ps
 ```
 
-Defina `JWT_SECRET` com uma chave longa e aleatoria no ambiente antes de usar
-o sistema fora do desenvolvimento.
+Servicos iniciados:
 
-O Compose sobe três serviços:
+- `api`: frontend, REST e Swagger em `http://localhost:3000`;
+- `worker`: processamento assincrono dos produtos;
+- `redis`: armazenamento da fila na porta `6379`.
 
-- `api`: Express + frontend + Swagger em `http://localhost:3000`;
-- `worker`: consumidor da fila BullMQ que processa criação, edição e remoção;
-- `redis`: broker usado pela fila.
+O SQLite e criado automaticamente em `data/tcc.sqlite` e persiste no host. Para
+encerrar os containers sem apagar os dados:
 
-O arquivo `data/tcc.sqlite` fica mapeado como volume na pasta `data/` do host,
-então os dados persistem entre `docker compose down` / `up`.
+```bash
+docker compose down
+```
 
-### Sem Docker
+## Executar sem Docker
+
+Requer Node.js 22.5 ou superior e um Redis acessivel localmente.
 
 ```bash
 npm install
-npm run dev      # com nodemon (reinicia sozinho)
-# ou
-npm start
+npm run dev
 ```
 
-Para testar a fila sem Docker, também é necessário ter Redis rodando e iniciar
-o worker em outro terminal:
+Em outro terminal:
 
 ```bash
 npm run worker
 ```
 
-Requer **Node.js >= 22.5** (usa o módulo nativo `node:sqlite`). Servidor sobe
-em `http://localhost:3000`. O banco SQLite é criado automaticamente em
-`data/tcc.sqlite` na primeira execução.
+## Interfaces
 
-## Endpoints
+- Dashboard e login: `http://localhost:3000/`
+- Area autenticada: `http://localhost:3000/app`
+- Swagger: `http://localhost:3000/api-docs`
 
-Base: `/api/produtos`
+A area autenticada possui as abas **Produtos**, **Equipe** e **Logs**. A aba
+Equipe aparece apenas para o proprietario. Colaboradores podem operar produtos
+e consultar o historico, mas nao podem criar ou remover outros membros.
 
-As rotas de produtos e jobs exigem um JWT valido. O login grava o token em
-cookie `HttpOnly` com validade de 15 minutos; clientes externos tambem podem
-enviar `Authorization: Bearer <token>`.
+## Autenticacao e seguranca
 
-| Metodo | Rota                 | Descricao                        |
-| ------ | -------------------- | -------------------------------- |
-| POST   | `/api/auth/register` | Cria uma conta e inicia a sessao |
-| POST   | `/api/auth/login`    | Autentica e devolve um JWT       |
-| GET    | `/api/auth/me`       | Retorna o usuario autenticado    |
-| POST   | `/api/auth/logout`   | Encerra a sessao                 |
+O login devolve um JWT e tambem o grava em cookie `HttpOnly` com
+`SameSite=Strict`. O token expira em 15 minutos. Clientes de API podem usar o
+cabecalho `Authorization: Bearer <token>`.
 
-| Método | Rota                            | Descrição                                     | Body                                                                 |
-| ------ | ------------------------------- | --------------------------------------------- | -------------------------------------------------------------------- |
-| POST   | `/api/produtos`                 | Cria um produto                               | `{ "nome": "...", "preco": 10.5, "categoria": "...", "estoque": 5 }` |
-| GET    | `/api/produtos`                 | Lista todos os produtos                       | —                                                                    |
-| GET    | `/api/produtos/count`           | Retorna o total de registros                  | —                                                                    |
-| GET    | `/api/produtos/search?nome=xyz` | Busca produtos por nome (parcial)             | —                                                                    |
-| GET    | `/api/produtos/:id`             | Busca um produto por ID                       | —                                                                    |
-| PUT    | `/api/produtos/:id`             | Atualiza um produto (campos parciais aceitos) | `{ "nome": "...", "preco": 12 }`                                     |
-| DELETE | `/api/produtos/:id`             | Remove um produto                             | —                                                                    |
+Rotas publicas:
 
-`categoria` e `estoque` são opcionais na criação (`estoque` default `0`).
+| Metodo | Rota                 | Funcao                                  |
+| ------ | -------------------- | --------------------------------------- |
+| POST   | `/api/auth/register` | Cria um proprietario e inicia a sessao  |
+| POST   | `/api/auth/login`    | Autentica e devolve o JWT               |
+| POST   | `/api/auth/logout`   | Remove o cookie da sessao               |
 
-As rotas `POST`, `PUT` e `DELETE` respondem `200` rapidamente com um `jobId`.
-O processamento real acontece no worker. Para consultar o andamento:
+Rotas protegidas:
+
+| Metodo | Rota                       | Funcao                                  |
+| ------ | -------------------------- | --------------------------------------- |
+| GET    | `/api/auth/me`             | Usuario, papel e proprietario da conta  |
+| GET    | `/api/produtos`            | Lista os produtos                       |
+| GET    | `/api/produtos/count`      | Conta os produtos                       |
+| GET    | `/api/produtos/search`     | Busca por nome com `?nome=`             |
+| GET    | `/api/produtos/:id`        | Busca um produto por ID                 |
+| POST   | `/api/produtos`            | Enfileira a criacao                     |
+| PUT    | `/api/produtos/:id`        | Enfileira a atualizacao                 |
+| DELETE | `/api/produtos/:id`        | Enfileira a remocao                     |
+| GET    | `/api/jobs/:id`            | Consulta um job do mesmo proprietario   |
+| GET    | `/api/colaboradores`       | Lista membros; somente proprietario     |
+| POST   | `/api/colaboradores`       | Cria membro; somente proprietario       |
+| DELETE | `/api/colaboradores/:id`   | Remove membro; somente proprietario     |
+| GET    | `/api/logs`                | Lista ate 200 atividades recentes       |
+
+## Fila e polling
+
+`POST`, `PUT` e `DELETE` de produtos respondem `200` com um `jobId`. O worker
+processa o job e registra a auditoria. Estados comuns: `waiting`, `active`,
+`completed` e `failed`. O frontend consulta `/api/jobs/:id` a cada 700 ms.
+
+## Auditoria
+
+Os logs registram o usuario, a acao, a entidade, o identificador, detalhes e o
+horario. Sao auditados:
+
+- criacao, atualizacao e remocao de produtos;
+- adicao e remocao de colaboradores.
+
+Cada proprietario e seus colaboradores enxergam apenas os logs do proprio
+espaco. Um colaborador removido e marcado como inativo, e o middleware rejeita
+seu acesso mesmo que o JWT ainda nao tenha expirado.
+
+## Exemplo de uso
+
+O exemplo abaixo usa um arquivo temporario de cookies para manter a sessao:
 
 ```bash
-curl http://localhost:3000/api/jobs/1
+# Criar proprietario e autenticar
+curl -c cookies.txt -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"nome":"Maria","email":"maria@email.com","senha":"senha123"}'
+
+# Enfileirar um produto
+curl -b cookies.txt -X POST http://localhost:3000/api/produtos \
+  -H "Content-Type: application/json" \
+  -d '{"nome":"Teclado","preco":250.90,"categoria":"Perifericos","estoque":10}'
+
+# Consultar o job retornado
+curl -b cookies.txt http://localhost:3000/api/jobs/1
+
+# Consultar atividades
+curl -b cookies.txt http://localhost:3000/api/logs
 ```
 
-Possíveis estados comuns: `waiting`, `active`, `completed` e `failed`.
-
-## Documentação da API (Swagger)
-
-A documentação interativa (OpenAPI 3.0) fica disponível em
-`http://localhost:3000/api-docs` assim que o servidor sobe — dá pra ver todos
-os endpoints, os schemas de `Produto` e testar as requisições direto pelo
-navegador.
-
-## Frontend
-
-Existe um frontend simples (HTML + CSS + JavaScript puro, sem framework nem
-build step) em `public/`, servido pelo próprio Express na raiz
-(`http://localhost:3000/`). A pagina inicial apresenta o sistema e permite
-entrar ou criar uma conta. A area protegida em `/app` consome a API para:
-
-- listar e buscar produtos por nome;
-- cadastrar um novo produto;
-- editar e remover um produto existente;
-- mostrar o total de produtos cadastrados;
-- acompanhar por polling o status dos jobs enviados para a fila.
-
-## Exemplos (curl)
+## Testes
 
 ```bash
-# Criar
-curl -X POST http://localhost:3000/api/produtos \
-  -H "Content-Type: application/json" \
-  -d '{"nome":"Teclado Mecanico","preco":250.90,"categoria":"Perifericos","estoque":10}'
-
-# Listar todos
-curl http://localhost:3000/api/produtos
-
-# Contar
-curl http://localhost:3000/api/produtos/count
-
-# Buscar por nome
-curl "http://localhost:3000/api/produtos/search?nome=teclado"
-
-# Buscar por ID
-curl http://localhost:3000/api/produtos/1
-
-# Atualizar
-curl -X PUT http://localhost:3000/api/produtos/1 \
-  -H "Content-Type: application/json" \
-  -d '{"estoque":8}'
-
-# Remover
-curl -X DELETE http://localhost:3000/api/produtos/1
+npm test
 ```
 
-## Persistência
+Os testes usam um SQLite temporario e cobrem cadastro, login, senha incorreta,
+JWT de 15 minutos, token adulterado, CRUD, isolamento de produtos, gestao de
+colaboradores, bloqueio de acesso e auditoria.
 
-Dados são gravados em `data/tcc.sqlite` via [`node:sqlite`](https://nodejs.org/api/sqlite.html),
-o módulo de SQLite **nativo do Node.js** (>= 22.5) — API síncrona, sem
-callbacks/promises, e sem nenhuma dependência externa ou compilação nativa. O arquivo `.sqlite` não é versionado (está no `.gitignore`).
+## Governanca e documentacao viva
 
-O Node imprime um aviso `ExperimentalWarning: SQLite is an experimental
-feature` ao iniciar — é esperado, não é um erro; a API já é estável o
-suficiente para uso e não requer nenhuma flag.
+O fluxo de tickets, prioridades e Definition of Done esta em
+[`docs/governance.md`](docs/governance.md). Formularios de defeito e melhoria
+ficam em `.github/ISSUE_TEMPLATE/`, e o checklist de revisao fica em
+`.github/pull_request_template.md`.
+
+Arquitetura, Swagger, README, testes e ADRs vivem no mesmo repositorio do
+codigo. Uma mudanca so e concluida quando essas fontes continuam coerentes com
+o comportamento entregue. Eu uso esse mesmo modelo em um projeto de uma
+startup que estou fundando.
+
+## Persistencia
+
+O projeto usa `node:sqlite`, modulo nativo e ainda experimental no Node.js 22.
+O aviso `ExperimentalWarning` durante testes ou inicializacao e esperado. O
+arquivo `data/tcc.sqlite` e seus arquivos WAL nao sao versionados.
