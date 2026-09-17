@@ -11,19 +11,74 @@ const cancelarBtn = document.getElementById('cancelarBtn');
 const buscaInput = document.getElementById('buscaInput');
 
 let termoBusca = '';
+let pollingId = null;
 
 function formatarPreco(valor) {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-function mostrarErro(texto) {
+function mostrarMensagem(texto, tipo = 'erro') {
   mensagemEl.textContent = texto;
+  mensagemEl.classList.remove('erro', 'info', 'sucesso');
+  mensagemEl.classList.add(tipo);
   mensagemEl.classList.remove('hidden');
 }
 
-function limparErro() {
+function mostrarErro(texto) {
+  mostrarMensagem(texto, 'erro');
+}
+
+function limparMensagem() {
   mensagemEl.classList.add('hidden');
   mensagemEl.textContent = '';
+  mensagemEl.classList.remove('erro', 'info', 'sucesso');
+}
+
+async function acompanharJob(jobId) {
+  if (!jobId) return;
+
+  clearInterval(pollingId);
+  mostrarMensagem(`Operacao ${jobId} enviada para a fila. Aguardando processamento...`, 'info');
+
+  let tentativas = 0;
+  pollingId = setInterval(async () => {
+    tentativas += 1;
+
+    try {
+      const resp = await fetch(`/api/jobs/${jobId}`);
+      const job = await resp.json();
+
+      if (!resp.ok) {
+        mostrarErro(job.error || 'Nao foi possivel consultar o job.');
+        clearInterval(pollingId);
+        return;
+      }
+
+      if (job.status === 'completed') {
+        clearInterval(pollingId);
+        mostrarMensagem('Operacao processada com sucesso.', 'sucesso');
+        await carregarProdutos();
+        setTimeout(limparMensagem, 2500);
+        return;
+      }
+
+      if (job.status === 'failed') {
+        clearInterval(pollingId);
+        mostrarErro(job.erro || 'O processamento da fila falhou.');
+        await carregarProdutos();
+        return;
+      }
+
+      if (tentativas >= 20) {
+        clearInterval(pollingId);
+        mostrarMensagem('Operacao ainda esta na fila. A lista sera atualizada na proxima consulta.', 'info');
+        await carregarProdutos();
+      }
+    } catch (err) {
+      clearInterval(pollingId);
+      mostrarErro('Falha ao consultar o status da fila.');
+    }
+  }, 700);
 }
 
 function entrarModoEdicao(produto) {
@@ -56,7 +111,8 @@ async function removerProduto(id) {
     return;
   }
 
-  await carregarProdutos();
+  const job = await resp.json();
+  await acompanharJob(job.jobId);
 }
 
 function renderProdutos(produtos) {
@@ -110,7 +166,7 @@ buscaInput.addEventListener('input', (event) => {
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
-  limparErro();
+  limparMensagem();
 
   const id = produtoIdInput.value;
   const dados = {
@@ -132,8 +188,9 @@ form.addEventListener('submit', async (event) => {
     return;
   }
 
+  const job = await resp.json();
   sairModoEdicao();
-  await carregarProdutos();
+  await acompanharJob(job.jobId);
 });
 
 cancelarBtn.addEventListener('click', sairModoEdicao);
