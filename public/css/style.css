@@ -72,6 +72,26 @@ body {
   gap: 1.5rem;
 }
 
+.app-nav {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0 2rem;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-tab {
+  padding: 0.85rem 1rem;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.nav-tab:hover { background: #f8fafc; }
+.nav-tab.active { border-bottom-color: var(--primary); color: var(--primary); }
+.app-view { display: grid; gap: 1.5rem; }
+
 .card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -110,6 +130,17 @@ body {
   outline: none;
   border-color: var(--primary);
 }
+
+.inline-form {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr auto;
+  align-items: end;
+  gap: 0.9rem;
+}
+
+.inline-form label { display: block; margin-bottom: 0.25rem; color: var(--muted); font-size: 0.8rem; }
+.inline-form input { width: 100%; padding: 0.55rem 0.7rem; border: 1px solid var(--border); border-radius: 6px; }
+.inline-form button { height: 38px; }
 
 .form-actions {
   grid-column: 1 / -1;
@@ -287,6 +318,8 @@ td.acoes button {
   .intro h1 { font-size: 2.5rem; }
   .topbar { align-items: flex-start; padding: 1rem; }
   .user-area { flex-wrap: wrap; justify-content: flex-end; }
+  .app-nav { padding: 0 1rem; overflow-x: auto; }
+  .inline-form { grid-template-columns: 1fr; }
   #usuarioNome { width: 100%; text-align: right; }
   #produtoForm {
     grid-template-columns: 1fr 1fr;

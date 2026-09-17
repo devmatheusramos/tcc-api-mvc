@@ -12,6 +12,7 @@ const buscaInput = document.getElementById('buscaInput');
 
 let termoBusca = '';
 let pollingId = null;
+let usuarioAtual = null;
 
 async function fetchAutenticado(url, options) {
   const resp = await fetch(url, options);
@@ -25,13 +26,109 @@ async function fetchAutenticado(url, options) {
 async function carregarUsuario() {
   const resp = await fetchAutenticado('/api/auth/me');
   const { usuario } = await resp.json();
+  usuarioAtual = usuario;
   document.getElementById('usuarioNome').textContent = usuario.nome;
+  document.getElementById('colaboradoresTab').classList.toggle(
+    'hidden',
+    usuario.papel !== 'proprietario',
+  );
 }
 
 document.getElementById('logoutBtn').addEventListener('click', async () => {
   await fetch('/api/auth/logout', { method: 'POST' });
   window.location.replace('/');
 });
+
+document.querySelectorAll('.nav-tab').forEach((tab) => tab.addEventListener('click', async () => {
+  document.querySelectorAll('.nav-tab').forEach((item) => item.classList.toggle('active', item === tab));
+  document.querySelectorAll('.app-view').forEach((view) => view.classList.add('hidden'));
+  document.getElementById(tab.dataset.view).classList.remove('hidden');
+
+  if (tab.dataset.view === 'colaboradoresView') await carregarColaboradores();
+  if (tab.dataset.view === 'logsView') await carregarLogs();
+}));
+
+function formatarData(valor) {
+  return new Date(`${valor.replace(' ', 'T')}Z`).toLocaleString('pt-BR');
+}
+
+async function carregarColaboradores() {
+  if (usuarioAtual?.papel !== 'proprietario') return;
+  const resp = await fetchAutenticado('/api/colaboradores');
+  const colaboradores = await resp.json();
+  const lista = document.getElementById('colaboradoresTbody');
+  lista.innerHTML = '';
+
+  colaboradores.forEach((colaborador) => {
+    const linha = document.createElement('tr');
+    [colaborador.nome, colaborador.email, formatarData(colaborador.criado_em)].forEach((valor) => {
+      const celula = document.createElement('td');
+      celula.textContent = valor;
+      linha.appendChild(celula);
+    });
+    const acoes = document.createElement('td');
+    acoes.className = 'acoes';
+    const remover = document.createElement('button');
+    remover.type = 'button';
+    remover.className = 'danger';
+    remover.textContent = 'Remover';
+    remover.addEventListener('click', () => removerColaborador(colaborador.id));
+    acoes.appendChild(remover);
+    linha.appendChild(acoes);
+    lista.appendChild(linha);
+  });
+}
+
+async function removerColaborador(id) {
+  if (!confirm('Remover este colaborador e bloquear seu acesso?')) return;
+  const resp = await fetchAutenticado(`/api/colaboradores/${id}`, { method: 'DELETE' });
+  const resposta = await resp.json();
+  if (!resp.ok) return exibirMensagemColaborador(resposta.error, 'erro');
+  exibirMensagemColaborador(resposta.mensagem, 'sucesso');
+  await carregarColaboradores();
+}
+
+function exibirMensagemColaborador(texto, tipo) {
+  const elemento = document.getElementById('colaboradorMensagem');
+  elemento.textContent = texto;
+  elemento.className = `mensagem ${tipo}`;
+}
+
+document.getElementById('colaboradorForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const dados = {
+    nome: document.getElementById('colaboradorNome').value.trim(),
+    email: document.getElementById('colaboradorEmail').value.trim(),
+    senha: document.getElementById('colaboradorSenha').value,
+  };
+  const resp = await fetchAutenticado('/api/colaboradores', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados),
+  });
+  const resposta = await resp.json();
+  if (!resp.ok) return exibirMensagemColaborador(resposta.error, 'erro');
+  event.target.reset();
+  exibirMensagemColaborador('Colaborador adicionado.', 'sucesso');
+  await carregarColaboradores();
+});
+
+async function carregarLogs() {
+  const resp = await fetchAutenticado('/api/logs');
+  const logs = await resp.json();
+  const lista = document.getElementById('logsTbody');
+  lista.innerHTML = '';
+  logs.forEach((log) => {
+    const linha = document.createElement('tr');
+    const item = log.entidade_id ? `${log.entidade} #${log.entidade_id}` : log.entidade;
+    [formatarData(log.criado_em), log.usuario_nome, log.acao, item, log.detalhes || '-'].forEach((valor) => {
+      const celula = document.createElement('td');
+      celula.textContent = valor;
+      linha.appendChild(celula);
+    });
+    lista.appendChild(linha);
+  });
+}
+
+document.getElementById('atualizarLogs').addEventListener('click', carregarLogs);
 
 function formatarPreco(valor) {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

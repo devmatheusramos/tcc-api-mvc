@@ -14,26 +14,63 @@
       <button type="button" id="logoutBtn" class="logout-btn">Sair</button>
     </div>
   </header>
+  <nav class="app-nav" aria-label="Navegacao principal">
+    <button type="button" class="nav-tab active" data-view="produtosView">Produtos</button>
+    <button type="button" class="nav-tab" data-view="colaboradoresView" id="colaboradoresTab">Equipe</button>
+    <button type="button" class="nav-tab" data-view="logsView">Logs</button>
+  </nav>
   <main class="container">
-    <section class="card">
-      <h2 id="formTitulo">Novo produto</h2>
-      <form id="produtoForm">
-        <input type="hidden" id="produtoId" />
-        <div><label for="nome">Nome</label><input type="text" id="nome" required placeholder="Ex: Teclado Mecanico" /></div>
-        <div><label for="preco">Preco</label><input type="number" id="preco" step="0.01" min="0.01" required placeholder="0.00" /></div>
-        <div><label for="categoria">Categoria</label><input type="text" id="categoria" placeholder="Ex: Perifericos" /></div>
-        <div><label for="estoque">Estoque</label><input type="number" id="estoque" min="0" step="1" placeholder="0" /></div>
-        <div class="form-actions"><button type="submit" id="submitBtn">Adicionar</button><button type="button" id="cancelarBtn" class="secondary hidden">Cancelar</button></div>
-      </form>
-    </section>
-    <section class="card">
-      <div class="lista-header"><h2>Produtos</h2><input type="search" id="buscaInput" placeholder="Buscar por nome..." /></div>
-      <p id="mensagem" class="mensagem hidden"></p>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Nome</th><th>Categoria</th><th>Preco</th><th>Estoque</th><th></th></tr></thead>
-        <tbody id="produtosTbody"></tbody>
-      </table></div>
-    </section>
+    <div id="produtosView" class="app-view">
+      <section class="card">
+        <h2 id="formTitulo">Novo produto</h2>
+        <form id="produtoForm">
+          <input type="hidden" id="produtoId" />
+          <div><label for="nome">Nome</label><input type="text" id="nome" required placeholder="Ex: Teclado Mecanico" /></div>
+          <div><label for="preco">Preco</label><input type="number" id="preco" step="0.01" min="0.01" required placeholder="0.00" /></div>
+          <div><label for="categoria">Categoria</label><input type="text" id="categoria" placeholder="Ex: Perifericos" /></div>
+          <div><label for="estoque">Estoque</label><input type="number" id="estoque" min="0" step="1" placeholder="0" /></div>
+          <div class="form-actions"><button type="submit" id="submitBtn">Adicionar</button><button type="button" id="cancelarBtn" class="secondary hidden">Cancelar</button></div>
+        </form>
+      </section>
+      <section class="card">
+        <div class="lista-header"><h2>Produtos</h2><input type="search" id="buscaInput" placeholder="Buscar por nome..." /></div>
+        <p id="mensagem" class="mensagem hidden"></p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Nome</th><th>Categoria</th><th>Preco</th><th>Estoque</th><th></th></tr></thead>
+          <tbody id="produtosTbody"></tbody>
+        </table></div>
+      </section>
+    </div>
+
+    <div id="colaboradoresView" class="app-view hidden">
+      <section class="card">
+        <h2>Adicionar colaborador</h2>
+        <form id="colaboradorForm" class="inline-form">
+          <div><label for="colaboradorNome">Nome</label><input id="colaboradorNome" required /></div>
+          <div><label for="colaboradorEmail">E-mail</label><input id="colaboradorEmail" type="email" required /></div>
+          <div><label for="colaboradorSenha">Senha inicial</label><input id="colaboradorSenha" type="password" minlength="6" required /></div>
+          <button type="submit">Adicionar</button>
+        </form>
+        <p id="colaboradorMensagem" class="mensagem hidden"></p>
+      </section>
+      <section class="card">
+        <h2>Equipe</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Nome</th><th>E-mail</th><th>Desde</th><th></th></tr></thead>
+          <tbody id="colaboradoresTbody"></tbody>
+        </table></div>
+      </section>
+    </div>
+
+    <div id="logsView" class="app-view hidden">
+      <section class="card">
+        <div class="lista-header"><h2>Historico de atividades</h2><button type="button" id="atualizarLogs" class="secondary">Atualizar</button></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Data</th><th>Usuario</th><th>Acao</th><th>Item</th><th>Detalhes</th></tr></thead>
+          <tbody id="logsTbody"></tbody>
+        </table></div>
+      </section>
+    </div>
   </main>
   <script src="js/script.js"></script>
 </body>
