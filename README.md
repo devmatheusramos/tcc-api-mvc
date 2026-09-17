@@ -15,11 +15,13 @@ Desenho completo (C4 + diagrama de sequência + diagrama de classes) em
 ```
 src/
 ├── config/database.js       # conexão com o SQLite + criação da tabela
+├── config/swagger.js        # configuração do OpenAPI/Swagger
 ├── models/ProdutoModel.js   # acesso a dados (SQL) — sem regra de negócio
 ├── services/ProdutoService.js # validação e regras de negócio
 ├── controllers/ProdutoController.js # camada HTTP (req/res, status codes)
-├── routes/                  # mapeamento de rotas -> controllers
+├── routes/                  # mapeamento de rotas -> controllers (com anotações OpenAPI)
 └── app.js                   # configuração do Express
+public/                      # frontend estático (HTML/CSS/JS puro) que consome a API
 server.js                    # ponto de entrada (sobe o servidor)
 data/tcc.sqlite               # arquivo do banco (gerado automaticamente)
 docs/architecture.md         # diagramas de arquitetura
@@ -73,6 +75,24 @@ Base: `/api/produtos`
 | DELETE | `/api/produtos/:id`             | Remove um produto                             | —                                                                    |
 
 `categoria` e `estoque` são opcionais na criação (`estoque` default `0`).
+
+## Documentação da API (Swagger)
+
+A documentação interativa (OpenAPI 3.0) fica disponível em
+`http://localhost:3000/api-docs` assim que o servidor sobe — dá pra ver todos
+os endpoints, os schemas de `Produto` e testar as requisições direto pelo
+navegador.
+
+## Frontend
+
+Existe um frontend simples (HTML + CSS + JavaScript puro, sem framework nem
+build step) em `public/`, servido pelo próprio Express na raiz
+(`http://localhost:3000/`). Ele consome a API para:
+
+- listar e buscar produtos por nome;
+- cadastrar um novo produto;
+- editar e remover um produto existente;
+- mostrar o total de produtos cadastrados.
 
 ## Exemplos (curl)
 
