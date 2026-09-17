@@ -62,16 +62,11 @@ router.get('/search', ProdutoController.findByName);
  *         application/json:
  *           schema: { $ref: '#/components/schemas/NovoProduto' }
  *     responses:
- *       201:
- *         description: Produto criado
+ *       200:
+ *         description: Criacao enfileirada para processamento assincrono
  *         content:
  *           application/json:
- *             schema: { $ref: '#/components/schemas/Produto' }
- *       400:
- *         description: Dados invalidos
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/Erro' }
+ *             schema: { $ref: '#/components/schemas/JobEnfileirado' }
  *   get:
  *     summary: Lista todos os produtos
  *     tags: [Produtos]
@@ -124,15 +119,10 @@ router.get('/', ProdutoController.findAll);
  *           schema: { $ref: '#/components/schemas/NovoProduto' }
  *     responses:
  *       200:
- *         description: Produto atualizado
+ *         description: Atualizacao enfileirada para processamento assincrono
  *         content:
  *           application/json:
- *             schema: { $ref: '#/components/schemas/Produto' }
- *       404:
- *         description: Produto nao encontrado
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/Erro' }
+ *             schema: { $ref: '#/components/schemas/JobEnfileirado' }
  *   delete:
  *     summary: Remove um produto
  *     tags: [Produtos]
@@ -142,13 +132,11 @@ router.get('/', ProdutoController.findAll);
  *         required: true
  *         schema: { type: integer }
  *     responses:
- *       204:
- *         description: Produto removido
- *       404:
- *         description: Produto nao encontrado
+ *       200:
+ *         description: Remocao enfileirada para processamento assincrono
  *         content:
  *           application/json:
- *             schema: { $ref: '#/components/schemas/Erro' }
+ *             schema: { $ref: '#/components/schemas/JobEnfileirado' }
  */
 router.get('/:id', ProdutoController.findById);
 router.put('/:id', ProdutoController.update);

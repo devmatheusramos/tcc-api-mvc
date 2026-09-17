@@ -9,7 +9,7 @@ const options = {
       description:
         'API REST de CRUD de Produtos (pos-graduacao em Arquitetura de Software), ' +
         'construida em Node.js + Express seguindo o padrao MVC + Service, ' +
-        'com persistencia em SQLite.',
+        'com persistencia em SQLite, rate limit e fila BullMQ/Redis para escritas assincronas.',
     },
     servers: [{ url: '/api', description: 'Servidor local' }],
     components: {
@@ -39,6 +39,36 @@ const options = {
           type: 'object',
           properties: {
             error: { type: 'string' },
+          },
+        },
+        JobEnfileirado: {
+          type: 'object',
+          properties: {
+            jobId: { type: 'string', example: '1' },
+            status: { type: 'string', example: 'na fila' },
+            mensagem: { type: 'string' },
+          },
+        },
+        JobStatus: {
+          type: 'object',
+          properties: {
+            jobId: { type: 'string', example: '1' },
+            status: { type: 'string', example: 'completed' },
+            progress: { type: 'number', example: 0 },
+            resultado: {
+              oneOf: [
+                { $ref: '#/components/schemas/Produto' },
+                {
+                  type: 'object',
+                  properties: {
+                    removido: { type: 'boolean', example: true },
+                    id: { type: 'integer', example: 1 },
+                  },
+                },
+              ],
+              nullable: true,
+            },
+            erro: { type: 'string', nullable: true, example: null },
           },
         },
       },
