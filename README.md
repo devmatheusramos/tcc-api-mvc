@@ -43,9 +43,14 @@ Dockerfile / docker-compose.yml # empacota a API para rodar em container
 docker compose up --build
 ```
 
-Servidor sobe em `http://localhost:3000`. O arquivo `data/tcc.sqlite` fica
-mapeado como volume na pasta `data/` do host, então os dados persistem entre
-`docker compose down` / `up`.
+O Compose sobe três serviços:
+
+- `api`: Express + frontend + Swagger em `http://localhost:3000`;
+- `worker`: consumidor da fila BullMQ que processa criação, edição e remoção;
+- `redis`: broker usado pela fila.
+
+O arquivo `data/tcc.sqlite` fica mapeado como volume na pasta `data/` do host,
+então os dados persistem entre `docker compose down` / `up`.
 
 ### Sem Docker
 
@@ -54,6 +59,13 @@ npm install
 npm run dev      # com nodemon (reinicia sozinho)
 # ou
 npm start
+```
+
+Para testar a fila sem Docker, também é necessário ter Redis rodando e iniciar
+o worker em outro terminal:
+
+```bash
+npm run worker
 ```
 
 Requer **Node.js >= 22.5** (usa o módulo nativo `node:sqlite`). Servidor sobe
@@ -76,6 +88,15 @@ Base: `/api/produtos`
 
 `categoria` e `estoque` são opcionais na criação (`estoque` default `0`).
 
+As rotas `POST`, `PUT` e `DELETE` respondem `200` rapidamente com um `jobId`.
+O processamento real acontece no worker. Para consultar o andamento:
+
+```bash
+curl http://localhost:3000/api/jobs/1
+```
+
+Possíveis estados comuns: `waiting`, `active`, `completed` e `failed`.
+
 ## Documentação da API (Swagger)
 
 A documentação interativa (OpenAPI 3.0) fica disponível em
@@ -92,7 +113,8 @@ build step) em `public/`, servido pelo próprio Express na raiz
 - listar e buscar produtos por nome;
 - cadastrar um novo produto;
 - editar e remover um produto existente;
-- mostrar o total de produtos cadastrados.
+- mostrar o total de produtos cadastrados;
+- acompanhar por polling o status dos jobs enviados para a fila.
 
 ## Exemplos (curl)
 
