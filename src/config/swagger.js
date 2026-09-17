@@ -12,8 +12,33 @@ const options = {
         'com persistencia em SQLite, rate limit e fila BullMQ/Redis para escritas assincronas.',
     },
     servers: [{ url: '/api', description: 'Servidor local' }],
+    security: [{ bearerAuth: [] }],
     components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
       schemas: {
+        CredenciaisCadastro: {
+          type: 'object',
+          required: ['nome', 'email', 'senha'],
+          properties: {
+            nome: { type: 'string', example: 'Maria Silva' },
+            email: { type: 'string', format: 'email', example: 'maria@email.com' },
+            senha: { type: 'string', format: 'password', minLength: 6 },
+          },
+        },
+        CredenciaisLogin: {
+          type: 'object',
+          required: ['email', 'senha'],
+          properties: {
+            email: { type: 'string', format: 'email', example: 'maria@email.com' },
+            senha: { type: 'string', format: 'password' },
+          },
+        },
         Produto: {
           type: 'object',
           properties: {

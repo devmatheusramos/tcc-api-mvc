@@ -16,6 +16,7 @@ services:
       - PORT=3000
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:-chave-local-docker-altere-em-producao}
 
   worker:
     build: .

@@ -43,6 +43,9 @@ Dockerfile / docker-compose.yml # empacota a API para rodar em container
 docker compose up --build
 ```
 
+Defina `JWT_SECRET` com uma chave longa e aleatoria no ambiente antes de usar
+o sistema fora do desenvolvimento.
+
 O Compose sobe três serviços:
 
 - `api`: Express + frontend + Swagger em `http://localhost:3000`;
@@ -76,6 +79,17 @@ em `http://localhost:3000`. O banco SQLite é criado automaticamente em
 
 Base: `/api/produtos`
 
+As rotas de produtos e jobs exigem um JWT valido. O login grava o token em
+cookie `HttpOnly` com validade de 15 minutos; clientes externos tambem podem
+enviar `Authorization: Bearer <token>`.
+
+| Metodo | Rota                 | Descricao                        |
+| ------ | -------------------- | -------------------------------- |
+| POST   | `/api/auth/register` | Cria uma conta e inicia a sessao |
+| POST   | `/api/auth/login`    | Autentica e devolve um JWT       |
+| GET    | `/api/auth/me`       | Retorna o usuario autenticado    |
+| POST   | `/api/auth/logout`   | Encerra a sessao                 |
+
 | Método | Rota                            | Descrição                                     | Body                                                                 |
 | ------ | ------------------------------- | --------------------------------------------- | -------------------------------------------------------------------- |
 | POST   | `/api/produtos`                 | Cria um produto                               | `{ "nome": "...", "preco": 10.5, "categoria": "...", "estoque": 5 }` |
@@ -108,7 +122,8 @@ navegador.
 
 Existe um frontend simples (HTML + CSS + JavaScript puro, sem framework nem
 build step) em `public/`, servido pelo próprio Express na raiz
-(`http://localhost:3000/`). Ele consome a API para:
+(`http://localhost:3000/`). A pagina inicial apresenta o sistema e permite
+entrar ou criar uma conta. A area protegida em `/app` consome a API para:
 
 - listar e buscar produtos por nome;
 - cadastrar um novo produto;
