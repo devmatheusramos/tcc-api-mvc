@@ -1,4 +1,5 @@
 const ProdutoService = require('../services/ProdutoService');
+const produtoQueue = require('../queue/produtoQueue');
 
 function tratarErro(res, err) {
   if (err instanceof ProdutoService.ValidationError) {
@@ -9,10 +10,14 @@ function tratarErro(res, err) {
 }
 
 const ProdutoController = {
-  create(req, res) {
+  async create(req, res) {
     try {
-      const produto = ProdutoService.criar(req.body);
-      res.status(201).json(produto);
+      const job = await produtoQueue.add('criar', { tipo: 'criar', dados: req.body });
+      res.status(200).json({
+        jobId: job.id,
+        status: 'na fila',
+        mensagem: 'Produto sera criado em instantes. Consulte /api/jobs/:id ou atualize a listagem.',
+      });
     } catch (err) {
       tratarErro(res, err);
     }
@@ -43,24 +48,34 @@ const ProdutoController = {
     res.json(produto);
   },
 
-  update(req, res) {
+  async update(req, res) {
     try {
-      const produto = ProdutoService.atualizar(req.params.id, req.body);
-      if (!produto) {
-        return res.status(404).json({ error: 'Produto nao encontrado.' });
-      }
-      res.json(produto);
+      const job = await produtoQueue.add('atualizar', {
+        tipo: 'atualizar',
+        id: req.params.id,
+        dados: req.body,
+      });
+      res.status(200).json({
+        jobId: job.id,
+        status: 'na fila',
+        mensagem: 'Atualizacao enviada para processamento.',
+      });
     } catch (err) {
       tratarErro(res, err);
     }
   },
 
-  delete(req, res) {
-    const removido = ProdutoService.remover(req.params.id);
-    if (!removido) {
-      return res.status(404).json({ error: 'Produto nao encontrado.' });
+  async delete(req, res) {
+    try {
+      const job = await produtoQueue.add('remover', { tipo: 'remover', id: req.params.id });
+      res.status(200).json({
+        jobId: job.id,
+        status: 'na fila',
+        mensagem: 'Remocao enviada para processamento.',
+      });
+    } catch (err) {
+      tratarErro(res, err);
     }
-    res.status(204).send();
   },
 };
 
