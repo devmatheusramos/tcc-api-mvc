@@ -1,9 +1,30 @@
 services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
   api:
     build: .
+    depends_on:
+      - redis
     ports:
       - "3000:3000"
     volumes:
       - ./data:/app/data
     environment:
       - PORT=3000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+  worker:
+    build: .
+    command: npm run worker
+    depends_on:
+      - redis
+      - api
+    volumes:
+      - ./data:/app/data
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
