@@ -232,24 +232,33 @@ async function removerProduto(id) {
   await acompanharJob(job.jobId);
 }
 
+function criarBotao(texto, classe, aoClicar) {
+  const botao = document.createElement('button');
+  botao.type = 'button';
+  botao.className = classe;
+  botao.textContent = texto;
+  botao.addEventListener('click', aoClicar);
+  return botao;
+}
+
 function renderProdutos(produtos) {
   tbody.innerHTML = '';
 
   produtos.forEach((produto) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${produto.nome}</td>
-      <td>${produto.categoria ?? '-'}</td>
-      <td>${formatarPreco(produto.preco)}</td>
-      <td>${produto.estoque}</td>
-      <td class="acoes">
-        <button type="button" class="secondary editar">Editar</button>
-        <button type="button" class="danger remover">Remover</button>
-      </td>
-    `;
+    [produto.nome, produto.categoria ?? '-', formatarPreco(produto.preco), produto.estoque].forEach((valor) => {
+      const celula = document.createElement('td');
+      celula.textContent = valor;
+      tr.appendChild(celula);
+    });
 
-    tr.querySelector('.editar').addEventListener('click', () => entrarModoEdicao(produto));
-    tr.querySelector('.remover').addEventListener('click', () => removerProduto(produto.id));
+    const acoes = document.createElement('td');
+    acoes.className = 'acoes';
+    acoes.append(
+      criarBotao('Editar', 'secondary', () => entrarModoEdicao(produto)),
+      criarBotao('Remover', 'danger', () => removerProduto(produto.id)),
+    );
+    tr.appendChild(acoes);
 
     tbody.appendChild(tr);
   });
