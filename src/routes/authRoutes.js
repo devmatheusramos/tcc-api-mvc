@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const AuthController = require('../controllers/AuthController');
 const { autenticar } = require('../middlewares/auth');
+const { authLimiter } = require('../middlewares/rateLimiter');
 
 const router = Router();
 
@@ -20,7 +21,7 @@ const router = Router();
  *       201: { description: Conta criada }
  *       400: { description: Dados invalidos }
  */
-router.post('/register', AuthController.register);
+router.post('/register', authLimiter, AuthController.register);
 
 /**
  * @openapi
@@ -37,8 +38,9 @@ router.post('/register', AuthController.register);
  *     responses:
  *       200: { description: Login realizado }
  *       401: { description: Credenciais incorretas }
+ *       429: { description: Tentativas excedidas }
  */
-router.post('/login', AuthController.login);
+router.post('/login', authLimiter, AuthController.login);
 
 /**
  * @openapi
