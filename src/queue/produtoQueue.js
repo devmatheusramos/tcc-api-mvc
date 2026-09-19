@@ -1,6 +1,12 @@
-const { Queue } = require('bullmq');
-const connection = require('../config/redis');
+const filas = {
+  inline: () => require('./filaInline'),
+  redis: () => require('./filaRedis'),
+};
 
-const produtoQueue = new Queue('produtos', { connection });
+const modo = process.env.QUEUE_MODE || 'inline';
 
-module.exports = produtoQueue;
+if (!filas[modo]) {
+  throw new Error(`QUEUE_MODE invalido: "${modo}". Use "inline" ou "redis".`);
+}
+
+module.exports = filas[modo]();

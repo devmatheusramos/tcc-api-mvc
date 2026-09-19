@@ -2,25 +2,14 @@ const produtoQueue = require('../queue/produtoQueue');
 
 const JobController = {
   async findById(req, res) {
-    const job = await produtoQueue.getJob(req.params.id);
+    const job = await produtoQueue.consultar(req.params.id);
 
-      if (!job) {
+    if (!job || job.donoId !== req.usuario.donoId) {
       return res.status(404).json({ error: 'Job nao encontrado.' });
-      }
+    }
 
-      if (job.data.contexto?.donoId !== req.usuario.donoId) {
-        return res.status(404).json({ error: 'Job nao encontrado.' });
-      }
-
-    const state = await job.getState();
-
-    return res.json({
-      jobId: job.id,
-      status: state,
-      progress: job.progress,
-      resultado: job.returnvalue ?? null,
-      erro: job.failedReason ?? null,
-    });
+    const { donoId, ...statusPublico } = job;
+    return res.json(statusPublico);
   },
 };
 
