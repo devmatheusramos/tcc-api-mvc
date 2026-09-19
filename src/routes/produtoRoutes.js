@@ -62,11 +62,16 @@ router.get('/search', ProdutoController.findByName);
  *         application/json:
  *           schema: { $ref: '#/components/schemas/NovoProduto' }
  *     responses:
- *       200:
- *         description: Criacao enfileirada para processamento assincrono
+ *       202:
+ *         description: Criacao aceita e enfileirada; acompanhe em /jobs/{id} (cabecalho Location)
  *         content:
  *           application/json:
  *             schema: { $ref: '#/components/schemas/JobEnfileirado' }
+ *       400:
+ *         description: Dados invalidos
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Erro' }
  *   get:
  *     summary: Lista todos os produtos
  *     tags: [Produtos]
@@ -118,11 +123,21 @@ router.get('/', ProdutoController.findAll);
  *         application/json:
  *           schema: { $ref: '#/components/schemas/NovoProduto' }
  *     responses:
- *       200:
- *         description: Atualizacao enfileirada para processamento assincrono
+ *       202:
+ *         description: Atualizacao aceita e enfileirada; acompanhe em /jobs/{id} (cabecalho Location)
  *         content:
  *           application/json:
  *             schema: { $ref: '#/components/schemas/JobEnfileirado' }
+ *       400:
+ *         description: Dados invalidos
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Erro' }
+ *       404:
+ *         description: Produto nao encontrado
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Erro' }
  *   delete:
  *     summary: Remove um produto
  *     tags: [Produtos]
@@ -132,11 +147,16 @@ router.get('/', ProdutoController.findAll);
  *         required: true
  *         schema: { type: integer }
  *     responses:
- *       200:
- *         description: Remocao enfileirada para processamento assincrono
+ *       202:
+ *         description: Remocao aceita e enfileirada; acompanhe em /jobs/{id} (cabecalho Location)
  *         content:
  *           application/json:
  *             schema: { $ref: '#/components/schemas/JobEnfileirado' }
+ *       404:
+ *         description: Produto nao encontrado
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Erro' }
  */
 router.get('/:id', ProdutoController.findById);
 router.put('/:id', ProdutoController.update);

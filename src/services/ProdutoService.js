@@ -2,7 +2,7 @@ const ProdutoModel = require('../models/ProdutoModel');
 
 class ValidationError extends Error {}
 
-function validar({ nome, preco, estoque }, { parcial = false } = {}) {
+function validar({ nome, preco, categoria, estoque }, { parcial = false } = {}) {
   if (!parcial || nome !== undefined) {
     if (typeof nome !== 'string' || nome.trim().length === 0) {
       throw new ValidationError('"nome" e obrigatorio e deve ser uma string nao vazia.');
@@ -15,6 +15,10 @@ function validar({ nome, preco, estoque }, { parcial = false } = {}) {
     }
   }
 
+  if (categoria !== undefined && categoria !== null && typeof categoria !== 'string') {
+    throw new ValidationError('"categoria" deve ser uma string.');
+  }
+
   if (estoque !== undefined) {
     if (!Number.isInteger(estoque) || estoque < 0) {
       throw new ValidationError('"estoque" deve ser um numero inteiro maior ou igual a zero.');
@@ -24,6 +28,14 @@ function validar({ nome, preco, estoque }, { parcial = false } = {}) {
 
 const ProdutoService = {
   ValidationError,
+
+  validarCriacao(dados) {
+    validar(dados);
+  },
+
+  validarAtualizacao(dados) {
+    validar(dados, { parcial: true });
+  },
 
   criar(dados, donoId) {
     validar(dados);

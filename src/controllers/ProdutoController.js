@@ -9,17 +9,29 @@ function tratarErro(res, err) {
   return res.status(500).json({ error: 'Erro interno do servidor.' });
 }
 
+function produtoNaoEncontrado(res) {
+  return res.status(404).json({ error: 'Produto nao encontrado.' });
+}
+
+async function enfileirar(res, tipo, dados, mensagem) {
+  const job = await produtoQueue.add(tipo, { tipo, ...dados });
+  res.status(202).location(`/api/jobs/${job.id}`).json({
+    jobId: job.id,
+    status: 'na fila',
+    mensagem,
+  });
+}
+
 const ProdutoController = {
   async create(req, res) {
     try {
-      const job = await produtoQueue.add('criar', {
-        tipo: 'criar', dados: req.body, contexto: req.usuario,
-      });
-      res.status(200).json({
-        jobId: job.id,
-        status: 'na fila',
-        mensagem: 'Produto sera criado em instantes. Consulte /api/jobs/:id ou atualize a listagem.',
-      });
+      ProdutoService.validarCriacao(req.body);
+      await enfileirar(
+        res,
+        'criar',
+        { dados: req.body, contexto: req.usuario },
+        'Produto sera criado em instantes. Consulte /api/jobs/:id ou atualize a listagem.',
+      );
     } catch (err) {
       tratarErro(res, err);
     }
@@ -44,25 +56,22 @@ const ProdutoController = {
 
   findById(req, res) {
     const produto = ProdutoService.buscarPorId(req.params.id, req.usuario.donoId);
-    if (!produto) {
-      return res.status(404).json({ error: 'Produto nao encontrado.' });
-    }
+    if (!produto) return produtoNaoEncontrado(res);
     res.json(produto);
   },
 
   async update(req, res) {
     try {
-      const job = await produtoQueue.add('atualizar', {
-        tipo: 'atualizar',
-        id: req.params.id,
-        dados: req.body,
-        contexto: req.usuario,
-      });
-      res.status(200).json({
-        jobId: job.id,
-        status: 'na fila',
-        mensagem: 'Atualizacao enviada para processamento.',
-      });
+      ProdutoService.validarAtualizacao(req.body);
+      if (!ProdutoService.buscarPorId(req.params.id, req.usuario.donoId)) {
+        return produtoNaoEncontrado(res);
+      }
+      await enfileirar(
+        res,
+        'atualizar',
+        { id: req.params.id, dados: req.body, contexto: req.usuario },
+        'Atualizacao enviada para processamento.',
+      );
     } catch (err) {
       tratarErro(res, err);
     }
@@ -70,14 +79,15 @@ const ProdutoController = {
 
   async delete(req, res) {
     try {
-      const job = await produtoQueue.add('remover', {
-        tipo: 'remover', id: req.params.id, contexto: req.usuario,
-      });
-      res.status(200).json({
-        jobId: job.id,
-        status: 'na fila',
-        mensagem: 'Remocao enviada para processamento.',
-      });
+      if (!ProdutoService.buscarPorId(req.params.id, req.usuario.donoId)) {
+        return produtoNaoEncontrado(res);
+      }
+      await enfileirar(
+        res,
+        'remover',
+        { id: req.params.id, contexto: req.usuario },
+        'Remocao enviada para processamento.',
+      );
     } catch (err) {
       tratarErro(res, err);
     }
