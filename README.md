@@ -1,211 +1,118 @@
 # StockFlow - API REST MVC de Produtos
 
-Projeto do desafio final de Arquitetura de Software. O StockFlow e uma API
-REST em Node.js e Express, organizada em MVC + Service, com frontend proprio,
-persistencia SQLite, autenticacao JWT, colaboradores, auditoria e escritas
-assincronas com BullMQ e Redis.
+Projeto do desafio final de Arquitetura de Software: API REST de produtos em
+Node.js e Express, no padrao MVC + Service, com persistencia em SQLite,
+autenticacao JWT, colaboradores, auditoria e escritas assincronas com
+BullMQ e Redis. Usando a mesma estrutura de governança e tickets que uso no meu sistema Nobreak. Veja em app.nobreak.cloud. É meu saas que estou validando.
 
-## Funcionalidades
+## Onde esta a documentacao
 
-- CRUD, contagem, busca por ID, nome e listagem de produtos;
-- cadastro e login com JWT de 15 minutos;
-- senhas protegidas com `scrypt` e salt individual;
-- contas de colaboradores vinculadas ao proprietario;
-- isolamento dos produtos e jobs por proprietario;
-- auditoria de alteracoes em produtos e colaboradores;
-- fila para criar, atualizar e remover produtos;
-- polling do status dos jobs no frontend;
-- rate limit nas rotas da API;
-- contrato OpenAPI e interface Swagger;
-- testes automatizados com o runner nativo do Node.js;
-- execucao completa com Docker Compose.
-
-## Arquitetura
-
-Os diagramas C4, sequencias de login/fila e modelo de dominio estao em
-[`docs/architecture.md`](docs/architecture.md). As decisoes arquiteturais ficam
-em [`docs/adr/`](docs/adr/).
-
-Fluxo principal das camadas:
-
-```text
-Routes -> Controller -> Service -> Model -> SQLite
-```
-
-- **Routes:** endpoints, autenticacao e autorizacao.
-- **Controller:** traduz requisicoes e respostas HTTP.
-- **Service:** validacoes e regras de negocio.
-- **Model:** acesso SQL e persistencia.
-- **Worker:** consome jobs e reutiliza Service/Model para as escritas.
+| O que                     | Onde                                                   |
+| ------------------------- | ------------------------------------------------------ |
+| Arquitetura (C4)          | [`docs/c4-containers.pdf`](docs/c4-containers.pdf)     |
+| Componentes MVC           | [`docs/componentes-mvc.pdf`](docs/componentes-mvc.pdf) |
+| Decisoes arquiteturais    | [`docs/adr/`](docs/adr/)                               |
+| Governanca e tickets      | [`docs/governance.md`](docs/governance.md)             |
+| Contrato da API (Swagger) | `http://localhost:3000/api-docs`                       |
 
 ## Estrutura
 
 ```text
 src/
 |-- config/          # SQLite, Redis e Swagger
-|-- controllers/     # HTTP de auth, produtos, jobs, equipe e logs
+|-- routes/          # Endpoints, OpenAPI e autorizacao
+|-- controllers/     # Traduz HTTP em chamadas de Service
+|-- services/        # Validacoes e regras de negocio
+|-- models/          # Acesso SQL (produtos, usuarios, auditoria)
 |-- middlewares/     # JWT, autorizacao e rate limit
-|-- models/          # Produtos, usuarios e auditoria
-|-- queue/           # Fila BullMQ de produtos
-|-- routes/          # Endpoints e anotacoes OpenAPI
-|-- services/        # Regras de negocio
-|-- utils/           # Assinatura e verificacao JWT
+|-- queue/           # Fila de escritas (inline ou BullMQ/Redis)
 |-- workers/         # Consumidor da fila
-|-- app.js           # Configuracao do Express
-public/              # Dashboard, area protegida e JavaScript do frontend
-test/                # Testes com SQLite temporario
-docs/                # Arquitetura, governanca e ADRs
-.github/             # Templates de tickets e pull requests
-data/.gitkeep        # Mantem a pasta; o banco e criado em execucao
-docker-compose.yml   # API, worker e Redis
-Dockerfile           # Imagem Node.js da API e do worker
+|-- utils/           # Assinatura e verificacao do JWT
+`-- app.js           # Configuracao do Express
+public/              # View: dashboard e area autenticada
+test/                # Testes de servicos e da API HTTP
+docs/                # Diagramas, ADRs e governanca
 server.js            # Ponto de entrada
 ```
 
-## Executar com Docker
+Fluxo: `View -> Routes -> Controller -> Service -> Model -> SQLite`.
 
-Use uma chave longa e aleatoria em `JWT_SECRET` fora do desenvolvimento. O
-Compose possui um valor local apenas para facilitar a avaliacao.
+## Endpoints
+
+Rotas de `/api/produtos` e `/api/jobs` exigem login (JWT em cookie `HttpOnly`
+ou `Authorization: Bearer`). Cada proprietario ve apenas os proprios dados.
+
+| Metodo | Rota                     | Funcao                                |
+| ------ | ------------------------ | ------------------------------------- |
+| POST   | `/api/auth/register`     | Cria proprietario e inicia a sessao   |
+| POST   | `/api/auth/login`        | Autentica e devolve o JWT (15 min)    |
+| POST   | `/api/auth/logout`       | Encerra a sessao                      |
+| GET    | `/api/auth/me`           | Usuario logado                        |
+| GET    | `/api/produtos`          | Lista todos                           |
+| GET    | `/api/produtos/count`    | Conta os registros                    |
+| GET    | `/api/produtos/search`   | Busca por nome com `?nome=`           |
+| GET    | `/api/produtos/:id`      | Busca por ID                          |
+| POST   | `/api/produtos`          | Cria (responde `202` com `jobId`)     |
+| PUT    | `/api/produtos/:id`      | Atualiza (responde `202` com `jobId`) |
+| DELETE | `/api/produtos/:id`      | Remove (responde `202` com `jobId`)   |
+| GET    | `/api/jobs/:id`          | Status do job (`Location` da escrita) |
+| GET    | `/api/colaboradores`     | Lista membros (so proprietario)       |
+| POST   | `/api/colaboradores`     | Cria membro (so proprietario)         |
+| DELETE | `/api/colaboradores/:id` | Remove membro (so proprietario)       |
+| GET    | `/api/logs`              | Atividades recentes                   |
+
+Escritas de produtos validam os dados, respondem `202` e sao processadas pela
+fila; o cliente acompanha o resultado em `/api/jobs/:id`.
+
+## Executar
+
+Com Docker (API, worker e Redis):
 
 ```bash
 docker compose up --build -d
-docker compose ps
 ```
 
-Servicos iniciados:
-
-- `api`: frontend, REST e Swagger em `http://localhost:3000`;
-- `worker`: processamento assincrono dos produtos;
-- `redis`: armazenamento da fila na porta `6379`.
-
-O SQLite e criado automaticamente em `data/tcc.sqlite` e persiste no host. Para
-encerrar os containers sem apagar os dados:
-
-```bash
-docker compose down
-```
-
-## Executar sem Docker
-
-Requer Node.js 22.5 ou superior e um Redis acessivel localmente.
+Sem Docker (Node.js 22.13 ou superior, sem Redis):
 
 ```bash
 npm install
 npm run dev
 ```
 
-Em outro terminal:
+Interface em `http://localhost:3000`. Testes com `npm test`.
 
-```bash
-npm run worker
-```
+| Variavel                   | Padrao              | Funcao                                       |
+| -------------------------- | ------------------- | -------------------------------------------- |
+| `PORT`                     | `3000`              | Porta da API                                 |
+| `JWT_SECRET`               | de desenv.          | Chave do JWT; obrigatoria em producao        |
+| `QUEUE_MODE`               | `inline`            | `inline` (sem Redis) ou `redis` (com worker) |
+| `REDIS_HOST`, `REDIS_PORT` | `127.0.0.1`, `6379` | Conexao do Redis no modo `redis`             |
+| `DATA_DIR`                 | `./data`            | Pasta do arquivo SQLite                      |
 
-## Interfaces
+## Decisoes arquiteturais (ADR)
 
-- Dashboard e login: `http://localhost:3000/`
-- Area autenticada: `http://localhost:3000/app`
-- Swagger: `http://localhost:3000/api-docs`
+As decisoes relevantes ficam registradas em [`docs/adr/`](docs/adr/), uma por
+arquivo, com contexto, decisao e consequencias:
 
-A area autenticada possui as abas **Produtos**, **Equipe** e **Logs**. A aba
-Equipe aparece apenas para o proprietario. Colaboradores podem operar produtos
-e consultar o historico, mas nao podem criar ou remover outros membros.
+- [ADR 001](docs/adr/001-fila-assincrona.md): escritas de produtos passam por
+  uma fila BullMQ/Redis processada por um worker. A fila fica atras de uma
+  interface unica (`add` e `consultar`), com o modo `inline` para rodar e
+  testar sem Redis.
+- [ADR 002](docs/adr/002-contas-e-auditoria.md): usuarios tem papel de
+  proprietario ou colaborador, compartilham um espaco (`dono_id`) e todas as
+  alteracoes geram auditoria.
 
-## Autenticacao e seguranca
+Novas decisoes usam o modelo em [`docs/adr/template.md`](docs/adr/template.md).
 
-O login devolve um JWT e tambem o grava em cookie `HttpOnly` com
-`SameSite=Strict`. O token expira em 15 minutos. Clientes de API podem usar o
-cabecalho `Authorization: Bearer <token>`.
+## Tickets e governanca
 
-Rotas publicas:
+Toda mudanca comeca em um ticket (defeito ou melhoria, com prioridade e
+criterios de aceite) e segue o fluxo
+`Backlog -> Pronto -> Em andamento -> Em revisao -> Concluido`. O processo
+completo e a Definition of Done estao em
+[`docs/governance.md`](docs/governance.md).
 
-| Metodo | Rota                 | Funcao                                  |
-| ------ | -------------------- | --------------------------------------- |
-| POST   | `/api/auth/register` | Cria um proprietario e inicia a sessao  |
-| POST   | `/api/auth/login`    | Autentica e devolve o JWT               |
-| POST   | `/api/auth/logout`   | Remove o cookie da sessao               |
-
-Rotas protegidas:
-
-| Metodo | Rota                       | Funcao                                  |
-| ------ | -------------------------- | --------------------------------------- |
-| GET    | `/api/auth/me`             | Usuario, papel e proprietario da conta  |
-| GET    | `/api/produtos`            | Lista os produtos                       |
-| GET    | `/api/produtos/count`      | Conta os produtos                       |
-| GET    | `/api/produtos/search`     | Busca por nome com `?nome=`             |
-| GET    | `/api/produtos/:id`        | Busca um produto por ID                 |
-| POST   | `/api/produtos`            | Enfileira a criacao                     |
-| PUT    | `/api/produtos/:id`        | Enfileira a atualizacao                 |
-| DELETE | `/api/produtos/:id`        | Enfileira a remocao                     |
-| GET    | `/api/jobs/:id`            | Consulta um job do mesmo proprietario   |
-| GET    | `/api/colaboradores`       | Lista membros; somente proprietario     |
-| POST   | `/api/colaboradores`       | Cria membro; somente proprietario       |
-| DELETE | `/api/colaboradores/:id`   | Remove membro; somente proprietario     |
-| GET    | `/api/logs`                | Lista ate 200 atividades recentes       |
-
-## Fila e polling
-
-`POST`, `PUT` e `DELETE` de produtos respondem `200` com um `jobId`. O worker
-processa o job e registra a auditoria. Estados comuns: `waiting`, `active`,
-`completed` e `failed`. O frontend consulta `/api/jobs/:id` a cada 700 ms.
-
-## Auditoria
-
-Os logs registram o usuario, a acao, a entidade, o identificador, detalhes e o
-horario. Sao auditados:
-
-- criacao, atualizacao e remocao de produtos;
-- adicao e remocao de colaboradores.
-
-Cada proprietario e seus colaboradores enxergam apenas os logs do proprio
-espaco. Um colaborador removido e marcado como inativo, e o middleware rejeita
-seu acesso mesmo que o JWT ainda nao tenha expirado.
-
-## Exemplo de uso
-
-O exemplo abaixo usa um arquivo temporario de cookies para manter a sessao:
-
-```bash
-# Criar proprietario e autenticar
-curl -c cookies.txt -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"nome":"Maria","email":"maria@email.com","senha":"senha123"}'
-
-# Enfileirar um produto
-curl -b cookies.txt -X POST http://localhost:3000/api/produtos \
-  -H "Content-Type: application/json" \
-  -d '{"nome":"Teclado","preco":250.90,"categoria":"Perifericos","estoque":10}'
-
-# Consultar o job retornado
-curl -b cookies.txt http://localhost:3000/api/jobs/1
-
-# Consultar atividades
-curl -b cookies.txt http://localhost:3000/api/logs
-```
-
-## Testes
-
-```bash
-npm test
-```
-
-Os testes usam um SQLite temporario e cobrem cadastro, login, senha incorreta,
-JWT de 15 minutos, token adulterado, CRUD, isolamento de produtos, gestao de
-colaboradores, bloqueio de acesso e auditoria.
-
-## Governanca e documentacao viva
-
-O fluxo de tickets, prioridades e Definition of Done esta em
-[`docs/governance.md`](docs/governance.md). Formularios de defeito e melhoria
-ficam em `.github/ISSUE_TEMPLATE/`, e o checklist de revisao fica em
-`.github/pull_request_template.md`.
-
-Arquitetura, Swagger, README, testes e ADRs vivem no mesmo repositorio do
-codigo. Uma mudanca so e concluida quando essas fontes continuam coerentes com
-o comportamento entregue. Eu uso esse mesmo modelo em um projeto de uma
-startup que estou fundando.
-
-## Persistencia
-
-O projeto usa `node:sqlite`, modulo nativo e ainda experimental no Node.js 22.
-O aviso `ExperimentalWarning` durante testes ou inicializacao e esperado. O
-arquivo `data/tcc.sqlite` e seus arquivos WAL nao sao versionados.
+- Formularios de ticket: [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/)
+- Checklist de pull request: [`.github/pull_request_template.md`](.github/pull_request_template.md)
+- CI: [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda `npm test` a
+  cada push e pull request.

@@ -45,7 +45,8 @@ atualizar os documentos no mesmo conjunto de commits. O projeto mantem:
 
 - README para execucao, endpoints e visao geral;
 - Swagger/OpenAPI para o contrato HTTP;
-- Mermaid/C4 para arquitetura e fluxos;
+- diagramas de arquitetura em `docs/` (C4 de containers e componentes MVC)
+  para estrutura e fluxos;
 - ADR para decisoes arquiteturais relevantes;
 - tickets para contexto, aceite e acompanhamento do trabalho.
 
