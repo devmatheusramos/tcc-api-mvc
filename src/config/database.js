@@ -8,6 +8,8 @@ fs.mkdirSync(dataDir, { recursive: true });
 const dbPath = path.join(dataDir, 'tcc.sqlite');
 const db = new DatabaseSync(dbPath);
 
+// API e worker escrevem no mesmo arquivo: espera o lock em vez de falhar na hora.
+db.exec('PRAGMA busy_timeout = 5000');
 db.exec('PRAGMA journal_mode = WAL');
 
 db.exec(`
