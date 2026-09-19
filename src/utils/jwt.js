@@ -1,5 +1,9 @@
 const crypto = require('crypto');
 
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('JWT_SECRET e obrigatorio em producao.');
+}
+
 const JWT_SECRET = process.env.JWT_SECRET || 'desenvolvimento-troque-esta-chave';
 const TOKEN_TTL_SECONDS = 60 * 15;
 
@@ -34,11 +38,13 @@ function verificarToken(token) {
   if (partes.length !== 3) throw new Error('Token invalido.');
 
   const [header, payload, assinatura] = partes;
-  const assinaturaEsperada = crypto
+  // Compara o texto base64url, nao os bytes decodificados: o ultimo caractere
+  // carrega bits de preenchimento, e decodificar aceitaria codificacoes alternativas.
+  const assinaturaEsperada = Buffer.from(crypto
     .createHmac('sha256', JWT_SECRET)
     .update(`${header}.${payload}`)
-    .digest();
-  const assinaturaRecebida = Buffer.from(assinatura, 'base64url');
+    .digest('base64url'));
+  const assinaturaRecebida = Buffer.from(assinatura);
 
   if (
     assinaturaRecebida.length !== assinaturaEsperada.length
